@@ -1,12 +1,20 @@
 // Grab the elements we need from the page
 const form = document.getElementById("todo-form");
 const input = document.getElementById("todo-input");
+const dateInput = document.getElementById("todo-date");
 const list = document.getElementById("todo-list");
 const count = document.getElementById("count");
 const clearDone = document.getElementById("clear-done");
 
 // Load saved tasks from the browser (or start with an empty list)
 let todos = JSON.parse(localStorage.getItem("todos") || "[]");
+
+// Today's date as "YYYY-MM-DD" (the same format date inputs use)
+function today() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
 
 function save() {
   localStorage.setItem("todos", JSON.stringify(todos));
@@ -32,6 +40,22 @@ function render() {
     const text = document.createElement("span");
     text.textContent = todo.text;
 
+    // Target date: shown on every task and can be changed any time
+    const due = document.createElement("input");
+    due.type = "date";
+    due.className = "due";
+    due.title = "Target date";
+    due.value = todo.due || "";
+    if (todo.due && !todo.done && todo.due < today()) {
+      due.classList.add("overdue");
+      due.title = "Overdue!";
+    }
+    due.addEventListener("change", () => {
+      todos[index].due = due.value;
+      save();
+      render();
+    });
+
     const del = document.createElement("button");
     del.className = "delete";
     del.textContent = "×";
@@ -42,7 +66,7 @@ function render() {
       render();
     });
 
-    li.append(checkbox, text, del);
+    li.append(checkbox, text, due, del);
     list.appendChild(li);
   });
 
@@ -55,8 +79,9 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = input.value.trim();
   if (!text) return;
-  todos.push({ text, done: false });
+  todos.push({ text, done: false, due: dateInput.value });
   input.value = "";
+  dateInput.value = "";
   save();
   render();
 });
