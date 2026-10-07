@@ -16,6 +16,25 @@ function today() {
   return d.toISOString().slice(0, 10);
 }
 
+// A labelled date box, e.g. "Due [ 10/10/2026 ]"
+function dateField(labelText, value, onChange) {
+  const label = document.createElement("label");
+  label.className = "date-field";
+  label.textContent = labelText + " ";
+
+  const input = document.createElement("input");
+  input.type = "date";
+  input.value = value || "";
+  input.addEventListener("change", () => {
+    onChange(input.value);
+    save();
+    render();
+  });
+
+  label.appendChild(input);
+  return label;
+}
+
 function save() {
   localStorage.setItem("todos", JSON.stringify(todos));
 }
@@ -33,28 +52,45 @@ function render() {
     checkbox.checked = todo.done;
     checkbox.addEventListener("change", () => {
       todos[index].done = checkbox.checked;
+      // Record the day it was closed (or clear it if re-opened)
+      todos[index].closed = checkbox.checked ? today() : "";
       save();
       render();
     });
 
     const text = document.createElement("span");
+    text.className = "text";
     text.textContent = todo.text;
 
-    // Target date: shown on every task and can be changed any time
-    const due = document.createElement("input");
-    due.type = "date";
-    due.className = "due";
-    due.title = "Target date";
-    due.value = todo.due || "";
+    // Colour the crossed-out text by when it was closed vs. the due date
+    if (todo.done && todo.due && todo.closed) {
+      if (todo.closed > todo.due) li.classList.add("late");
+      else if (todo.closed === todo.due) li.classList.add("on-time");
+      else li.classList.add("early");
+    }
+
+    // Due date: can be changed any time
+    const due = dateField("Due", todo.due, (value) => {
+      todos[index].due = value;
+    });
     if (todo.due && !todo.done && todo.due < today()) {
       due.classList.add("overdue");
       due.title = "Overdue!";
     }
-    due.addEventListener("change", () => {
-      todos[index].due = due.value;
-      save();
-      render();
+
+    // Closed date: filled in automatically when ticked, editable after that
+    const closed = dateField("Closed", todo.closed, (value) => {
+      todos[index].closed = value;
     });
+    closed.querySelector("input").disabled = !todo.done;
+
+    const dates = document.createElement("div");
+    dates.className = "dates";
+    dates.append(due, closed);
+
+    const main = document.createElement("div");
+    main.className = "main";
+    main.append(text, dates);
 
     const del = document.createElement("button");
     del.className = "delete";
@@ -66,7 +102,7 @@ function render() {
       render();
     });
 
-    li.append(checkbox, text, due, del);
+    li.append(checkbox, main, del);
     list.appendChild(li);
   });
 

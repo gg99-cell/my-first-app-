@@ -79,22 +79,46 @@ ul { list-style: none; padding: 0; margin: 20px 0; }
 
 li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
 
-li span { flex: 1; word-break: break-word; }
-li.done span { text-decoration: line-through; color: var(--muted); }
+li input[type="checkbox"] { margin-top: 4px; }
 
-li .due {
-  padding: 4px 6px;
-  font-size: 0.85rem;
+li .main { flex: 1; min-width: 0; }
+li .text { display: block; word-break: break-word; }
+
+/* Closed tasks are crossed out; the colour shows when they were closed */
+li.done .text { text-decoration: line-through; color: var(--muted); }
+li.late .text    { color: #d33;    text-decoration-color: #d33; }     /* after due date */
+li.on-time .text { color: #1a9a4a; text-decoration-color: #1a9a4a; }  /* on due date */
+li.early .text   { color: #8a3fd1; text-decoration-color: #8a3fd1; }  /* before due date */
+
+li .dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+}
+
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
   color: var(--muted);
 }
-li .due.overdue { color: #d33; border-color: #d33; }
-li.done .due { opacity: 0.5; }
+
+.date-field input[type="date"] {
+  padding: 2px 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.date-field input:disabled { opacity: 0.4; }
+.date-field.overdue,
+.date-field.overdue input { color: #d33; border-color: #d33; }
 
 li .delete {
   background: none;
