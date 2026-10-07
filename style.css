@@ -142,3 +142,5 @@ footer {
   font-size: 0.8rem;
   color: #d33;
 }
+
+input.invalid { border-color: #d33; color: #d33; }

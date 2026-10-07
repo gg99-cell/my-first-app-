@@ -156,20 +156,39 @@ function render() {
   count.textContent = `${left} task${left === 1 ? "" : "s"} left`;
 }
 
-// The new-task date must be today or later
+// The new-task date must be today or later.
+// A bad date stays in the box (outlined red) and blocks Add until it's fixed.
 const newDueRules = { min: today(), name: "Due date" };
 const formArea = document.getElementById("form-errors");
 dateInput.min = newDueRules.min;
-dateInput.addEventListener("focus", () => {
-  newDueRules.min = dateInput.min = today(); // stays correct if the page is left open overnight
-});
+
+// Returns an error message for the new-task date box, or "" if it's OK
+function newDueError() {
+  // badInput = only part of the date is filled in (e.g. day but no month).
+  // Check this first: changing the box's `min` wipes a half-typed date in Chrome.
+  if (dateInput.validity.badInput || stillTyping(dateInput.value)) {
+    return "Finish entering the due date, or clear it";
+  }
+  // Keep "today" correct if the page is left open overnight
+  newDueRules.min = today();
+  if (dateInput.min !== newDueRules.min) dateInput.min = newDueRules.min;
+  return checkDate(dateInput.value, newDueRules);
+}
+
+function showNewDueError(error) {
+  dateInput.classList.toggle("invalid", error !== "");
+  formArea.innerHTML = "";
+  if (error) {
+    const box = document.createElement("div");
+    box.className = "error";
+    box.textContent = error;
+    formArea.appendChild(box);
+  }
+}
+
 dateInput.addEventListener("change", () => {
   if (stillTyping(dateInput.value)) return;
-  const error = checkDate(dateInput.value, newDueRules);
-  if (error) {
-    dateInput.value = "";
-    showError(formArea, error);
-  }
+  showNewDueError(newDueError());
 });
 
 // Add a new task when the form is submitted
@@ -177,11 +196,10 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = input.value.trim();
   if (!text) return;
-  newDueRules.min = today();
-  if (stillTyping(dateInput.value)) dateInput.value = "";
-  const error = checkDate(dateInput.value, newDueRules);
+  const error = newDueError();
+  showNewDueError(error);
   if (error) {
-    showError(formArea, error);
+    dateInput.focus();
     return;
   }
   todos.push({ text, done: false, due: dateInput.value });
