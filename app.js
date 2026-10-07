@@ -78,11 +78,12 @@ function render() {
       due.title = "Overdue!";
     }
 
-    // Closed date: filled in automatically when ticked, editable after that
+    // Closed date: filled in automatically when ticked, and can be set by hand.
+    // Setting it closes the task; clearing it re-opens the task.
     const closed = dateField("Closed", todo.closed, (value) => {
       todos[index].closed = value;
+      todos[index].done = value !== "";
     });
-    closed.querySelector("input").disabled = !todo.done;
 
     const dates = document.createElement("div");
     dates.className = "dates";

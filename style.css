@@ -116,7 +116,6 @@ li .dates {
   font-size: 0.8rem;
   color: var(--muted);
 }
-.date-field input:disabled { opacity: 0.4; }
 .date-field.overdue,
 .date-field.overdue input { color: #d33; border-color: #d33; }
 
