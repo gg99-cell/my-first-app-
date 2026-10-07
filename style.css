@@ -136,3 +136,9 @@ footer {
 }
 
 .link { background: none; color: var(--accent); padding: 0; font-size: 0.9rem; }
+
+.error {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #d33;
+}

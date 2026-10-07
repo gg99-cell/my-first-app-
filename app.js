@@ -16,8 +16,37 @@ function today() {
   return d.toISOString().slice(0, 10);
 }
 
+// Show a short red message under `container` for a few seconds
+function showError(container, message) {
+  let box = container.querySelector(":scope > .error");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "error";
+    container.appendChild(box);
+  }
+  box.textContent = message;
+  clearTimeout(box.timer);
+  box.timer = setTimeout(() => box.remove(), 3500);
+}
+
+// Check a date against the allowed range. Returns an error message, or "" if OK.
+// rules = { min, max, name } with min/max as "YYYY-MM-DD" (either is optional)
+function checkDate(value, rules) {
+  if (!value) return "";
+  if (rules.min && value < rules.min) return `${rules.name} can't be in the past`;
+  if (rules.max && value > rules.max) return `${rules.name} can't be in the future`;
+  return "";
+}
+
+// While someone types a year digit by digit, the box briefly holds dates
+// like 0002-10-07. Treat those as "still typing", not as a real date.
+function stillTyping(value) {
+  return value !== "" && value.slice(0, 4) < "1000";
+}
+
 // A labelled date box, e.g. "Due [ 10/10/2026 ]"
-function dateField(labelText, value, onChange) {
+// `rules` limits which dates are allowed; `errorArea` is where messages appear.
+function dateField(labelText, value, rules, errorArea, onChange) {
   const label = document.createElement("label");
   label.className = "date-field";
   label.textContent = labelText + " ";
@@ -25,10 +54,25 @@ function dateField(labelText, value, onChange) {
   const input = document.createElement("input");
   input.type = "date";
   input.value = value || "";
+  if (rules.min) input.min = rules.min; // greys out earlier days in the picker
+  if (rules.max) input.max = rules.max; // greys out later days in the picker
+
   input.addEventListener("change", () => {
+    if (stillTyping(input.value)) return;
+    const error = checkDate(input.value, rules);
+    if (error) {
+      input.value = value || ""; // put the old date back
+      showError(errorArea, error);
+      return;
+    }
     onChange(input.value);
     save();
     render();
+  });
+
+  // If they leave the box half-typed, put the old date back
+  input.addEventListener("blur", () => {
+    if (stillTyping(input.value)) input.value = value || "";
   });
 
   label.appendChild(input);
@@ -69,8 +113,11 @@ function render() {
       else li.classList.add("early");
     }
 
-    // Due date: can be changed any time
-    const due = dateField("Due", todo.due, (value) => {
+    const main = document.createElement("div");
+    main.className = "main";
+
+    // Due date: if changed, must be today or later
+    const due = dateField("Due", todo.due, { min: today(), name: "Due date" }, main, (value) => {
       todos[index].due = value;
     });
     if (todo.due && !todo.done && todo.due < today()) {
@@ -79,8 +126,8 @@ function render() {
     }
 
     // Closed date: filled in automatically when ticked, and can be set by hand.
-    // Setting it closes the task; clearing it re-opens the task.
-    const closed = dateField("Closed", todo.closed, (value) => {
+    // Must be today or earlier. Setting it closes the task; clearing it re-opens it.
+    const closed = dateField("Closed", todo.closed, { max: today(), name: "Closed date" }, main, (value) => {
       todos[index].closed = value;
       todos[index].done = value !== "";
     });
@@ -89,8 +136,6 @@ function render() {
     dates.className = "dates";
     dates.append(due, closed);
 
-    const main = document.createElement("div");
-    main.className = "main";
     main.append(text, dates);
 
     const del = document.createElement("button");
@@ -111,11 +156,34 @@ function render() {
   count.textContent = `${left} task${left === 1 ? "" : "s"} left`;
 }
 
+// The new-task date must be today or later
+const newDueRules = { min: today(), name: "Due date" };
+const formArea = document.getElementById("form-errors");
+dateInput.min = newDueRules.min;
+dateInput.addEventListener("focus", () => {
+  newDueRules.min = dateInput.min = today(); // stays correct if the page is left open overnight
+});
+dateInput.addEventListener("change", () => {
+  if (stillTyping(dateInput.value)) return;
+  const error = checkDate(dateInput.value, newDueRules);
+  if (error) {
+    dateInput.value = "";
+    showError(formArea, error);
+  }
+});
+
 // Add a new task when the form is submitted
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = input.value.trim();
   if (!text) return;
+  newDueRules.min = today();
+  if (stillTyping(dateInput.value)) dateInput.value = "";
+  const error = checkDate(dateInput.value, newDueRules);
+  if (error) {
+    showError(formArea, error);
+    return;
+  }
   todos.push({ text, done: false, due: dateInput.value });
   input.value = "";
   dateInput.value = "";
